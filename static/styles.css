@@ -1,0 +1,29 @@
+.api-status {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.api-status h3 {
+    margin-top: 0;
+    color: #495057;
+    font-size: 1.1em;
+}
+
+.status-ok {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.status-error {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.api-message {
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #6c757d;
+} 

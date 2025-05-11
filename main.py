@@ -25,6 +25,31 @@ else:
 
 openai.api_key = OPENAI_API_KEY
 
+# API Key 검증 함수
+def validate_api_key():
+    try:
+        if not OPENAI_API_KEY:
+            return False, "API Key가 설정되지 않았습니다."
+        
+        # 간단한 API 호출로 검증
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # 가장 가벼운 모델 사용
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=5
+        )
+        return True, "API Key가 유효합니다."
+    except openai.error.AuthenticationError:
+        return False, "API Key가 유효하지 않습니다."
+    except Exception as e:
+        return False, f"API Key 검증 중 오류 발생: {str(e)}"
+
+# 서버 시작 시 API Key 검증
+is_valid, message = validate_api_key()
+if not is_valid:
+    print(f"🚨 API Key 검증 실패: {message}")
+else:
+    print(f"✅ API Key 검증 성공: {message}")
+
 app = FastAPI()
 
 # Static and template settings
@@ -51,109 +76,85 @@ def init_db():
 init_db()
 
 # PDF generation function
-def generate_pdf(description, image_path, timestamp):
+def generate_pdf(data, timestamp):
     try:
         if not OPENAI_API_KEY:
             print("🚨 OpenAI API Key가 설정되지 않았습니다.")
             return None
 
         print(f"🔑 PDF 생성 시작 - API Key 상태: {'설정됨' if OPENAI_API_KEY else '설정되지 않음'}")
-        if OPENAI_API_KEY:
-            print(f"🔑 API Key 길이: {len(OPENAI_API_KEY)}")
-            print(f"🔑 API Key 시작: {OPENAI_API_KEY[:8]}...")
-
         pdf_dir = "pdf_reports"
         os.makedirs(pdf_dir, exist_ok=True)
         pdf_filename = f"{timestamp}.pdf"
         pdf_path = os.path.join(pdf_dir, pdf_filename)
 
-        # 폰트 설정 (Noto Sans CJK)
         font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf"
         font_path = "NotoSansCJKsc-Regular.otf"
-
-        # 폰트 다운로드 (없으면 다운로드)
         if not os.path.exists(font_path):
-            print("📝 Noto Sans CJK 폰트 다운로드 중...")
             response = requests.get(font_url)
             if response.status_code == 200:
                 with open(font_path, "wb") as f:
                     f.write(response.content)
-                print("✅ 폰트 다운로드 완료")
             else:
                 print(f"❌ 폰트 다운로드 실패: {response.status_code}")
                 return None
 
-        try:
-            # GPT-4를 사용하여 필드 자동 채우기
-            print("🤖 OpenAI API 호출 중...")
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "너는 아차사고 사례를 작성하는 전문가입니다. 입력된 사고 내용을 바탕으로 사례명, 발생일시, 발생장소, 발생개요, 설비, 발생원인, 예상피해, 재발방지대책을 자동으로 작성하세요."},
-                    {"role": "user", "content": f"사고 내용: {description}\n필드를 다음 형식으로 채우세요:\n\n사례명:\n발생일시:\n발생장소:\n발생개요:\n설비:\n발생원인:\n예상피해:\n재발방지대책:"}
-                ],
-                max_tokens=500,
-                temperature=0.7
-            )
-            print("✅ OpenAI API 호출 성공")
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.add_font("NotoSansCJK", "", font_path, uni=True)
+        pdf.set_font("NotoSansCJK", size=12)
 
-            generated_text = response.choices[0].message.content.strip()
-            sections = {"사례명": "", "발생일시": "", "발생장소": "", "발생개요": "", "설비": "", "발생원인": "", "예상피해": "", "재발방지대책": ""}
+        # 제목
+        pdf.set_font_size(20)
+        pdf.cell(0, 15, "아차사고 경험사례", ln=True, align="C")
+        pdf.ln(5)
 
-            for line in generated_text.splitlines():
-                for key in sections.keys():
-                    if line.startswith(key):
-                        sections[key] = line.replace(key + ":", "").strip()
+        # 작성자 정보 표
+        pdf.set_font_size(12)
+        pdf.cell(40, 10, "작성일자", 1, 0, "C")
+        pdf.cell(50, 10, data["작성일자"], 1, 0, "C")
+        pdf.cell(20, 10, "소속", 1, 0, "C")
+        pdf.cell(80, 10, data["department"], 1, 1, "C")
+        pdf.cell(20, 10, "직책", 1, 0, "C")
+        pdf.cell(30, 10, data["position"], 1, 0, "C")
+        pdf.cell(20, 10, "성명", 1, 0, "C")
+        pdf.cell(120, 10, data["name"], 1, 1, "C")
 
-            # PDF 생성
-            pdf = FPDF()
-            pdf.set_auto_page_break(auto=True, margin=15)
-            pdf.add_page()
+        # 사례 정보 표
+        pdf.cell(30, 10, "사례명", 1, 0, "C")
+        pdf.cell(80, 10, data["사례명"], 1, 0, "C")
+        pdf.cell(30, 10, "발생일시", 1, 0, "C")
+        pdf.cell(50, 10, data["발생일시"], 1, 1, "C")
+        pdf.cell(30, 10, "발생개요", 1, 0, "C")
+        pdf.cell(130, 10, data["발생개요"], 1, 1, "C")
+        pdf.cell(30, 10, "발생장소", 1, 0, "C")
+        pdf.cell(130, 10, data["발생장소"], 1, 1, "C")
+        pdf.cell(30, 10, "설비", 1, 0, "C")
+        pdf.cell(130, 10, data["설비"], 1, 1, "C")
+        pdf.cell(30, 10, "발생원인", 1, 0, "C")
+        pdf.cell(130, 10, data["발생원인"], 1, 1, "C")
+        pdf.cell(30, 10, "예상피해", 1, 0, "C")
+        pdf.cell(130, 10, data["예상피해"], 1, 1, "C")
+        pdf.cell(30, 10, "위험성추정및결정", 1, 0, "C")
+        pdf.cell(130, 10, data["위험성추정및결정"], 1, 1, "C")
+        pdf.cell(30, 10, "재발방지대책", 1, 0, "C")
+        pdf.cell(130, 10, data["재발방지대책"], 1, 1, "C")
 
-            # 폰트 등록
-            pdf.add_font("NotoSansCJK", "", font_path, uni=True)
-            pdf.set_font("NotoSansCJK", size=12)
+        # 관련사진
+        pdf.cell(0, 10, "관련사진", 1, 1, "C")
+        pdf.cell(90, 10, "개선 전 사진", 1, 0, "C")
+        pdf.cell(90, 10, "개선 후 사진", 1, 1, "C")
+        y_now = pdf.get_y()
+        if data["before_image_path"] and os.path.exists(data["before_image_path"].lstrip("/")):
+            pdf.image(data["before_image_path"].lstrip("/"), x=10, y=y_now+2, w=85)
+        if data["after_image_path"] and os.path.exists(data["after_image_path"].lstrip("/")):
+            pdf.image(data["after_image_path"].lstrip("/"), x=110, y=y_now+2, w=85)
+        pdf.ln(50)
+        pdf.cell(0, 10, "사진설명: 차량 하단 발판 미끄러짐 방지 사포 설치 등", 0, 1, "L")
 
-            # 문서 상단 제목
-            pdf.set_font_size(24)
-            pdf.cell(0, 15, "아차사고 경험사례", ln=True, align="C")
-            pdf.ln(10)
-
-            # 보고서 표 양식 (1페이지 구성)
-            table_headers = ["사례명", "발생일시", "발생장소", "발생개요", "설비", "발생원인", "예상피해", "재발방지대책"]
-            pdf.set_font_size(12)
-            pdf.set_fill_color(240, 240, 240)
-            for header in table_headers:
-                pdf.cell(0, 10, f"{header}: {sections[header]}", ln=True, fill=True)
-                pdf.ln(2)
-
-            # 이미지 추가 (개선 전/후 사진)
-            if image_path and image_path != "None":
-                try:
-                    image_full_path = image_path.lstrip("/")
-                    if os.path.exists(image_full_path):
-                        pdf.set_fill_color(240, 240, 240)
-                        pdf.cell(0, 10, "관련 사진", ln=True, fill=True)
-                        pdf.image(image_full_path, x=15, w=180)
-                        pdf.ln(10)
-                except Exception as e:
-                    print(f"이미지 추가 중 오류 발생: {e}")
-
-            # PDF 저장
-            pdf.output(pdf_path)
-            print(f"✅ PDF 생성 완료: {pdf_path}")
-            return f"/pdf_reports/{pdf_filename}"
-
-        except openai.error.AuthenticationError:
-            print("🚨 OpenAI API 인증 실패: API Key가 올바르지 않습니다.")
-            return None
-        except openai.error.APIError as e:
-            print(f"🚨 OpenAI API 호출 실패: {str(e)}")
-            return None
-        except Exception as e:
-            print(f"🚨 PDF 생성 중 예외 발생: {str(e)}")
-            return None
-
+        pdf.output(pdf_path)
+        print(f"✅ PDF 생성 완료: {pdf_path}")
+        return f"/pdf_reports/{pdf_filename}"
     except Exception as e:
         print(f"🚨 PDF 생성 중 예외 발생: {str(e)}")
         return None
@@ -166,10 +167,15 @@ async def index(request: Request):
         error_message = "PDF 생성에 실패했습니다. OpenAI API Key가 올바르게 설정되어 있는지 확인해주세요."
     elif error == 'submission_failed':
         error_message = "제출 처리 중 오류가 발생했습니다. 다시 시도해주세요."
+    
+    # API Key 상태 확인
+    is_valid, message = validate_api_key()
     return templates.TemplateResponse("index.html", {
         "request": request,
         "error_message": error_message,
-        "api_key_status": "설정됨" if OPENAI_API_KEY else "설정되지 않음"
+        "api_key_status": "설정됨" if OPENAI_API_KEY else "설정되지 않음",
+        "api_key_valid": is_valid,
+        "api_key_message": message
     })
 
 @app.get("/list", response_class=HTMLResponse)
@@ -182,12 +188,20 @@ async def list_cases(request: Request):
     return templates.TemplateResponse("list.html", {"request": request, "cases": cases})
 
 @app.post("/preview", response_class=HTMLResponse)
-async def preview_case(description: str = Form(...), image: UploadFile = File(None)):
+async def preview_case(request: Request,
+    department: str = Form(...),
+    position: str = Form(...),
+    name: str = Form(...),
+    description: str = Form(...),
+    before_image: UploadFile = File(None),
+    after_image: UploadFile = File(None)):
     try:
-        if not OPENAI_API_KEY:
+        # API Key 검증
+        is_valid, message = validate_api_key()
+        if not is_valid:
             return templates.TemplateResponse("preview.html", {
                 "request": request,
-                "error": "OpenAI API Key가 설정되지 않았습니다."
+                "error": f"OpenAI API Key 검증 실패: {message}"
             })
 
         # GPT-4를 사용하여 필드 자동 채우기
@@ -195,41 +209,55 @@ async def preview_case(description: str = Form(...), image: UploadFile = File(No
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "너는 아차사고 사례를 작성하는 전문가입니다. 입력된 사고 내용을 바탕으로 사례명, 발생일시, 발생장소, 발생개요, 설비, 발생원인, 예상피해, 재발방지대책을 자동으로 작성하세요."},
-                {"role": "user", "content": f"사고 내용: {description}\n필드를 다음 형식으로 채우세요:\n\n사례명:\n발생일시:\n발생장소:\n발생개요:\n설비:\n발생원인:\n예상피해:\n재발방지대책:"}
+                {"role": "system", "content": "너는 아차사고 사례를 작성하는 전문가입니다. 입력된 사고 내용을 바탕으로 사례명, 발생일시, 발생개요, 발생장소, 설비, 발생원인, 예상피해, 위험성추정및결정, 재발방지대책을 자동으로 작성하세요."},
+                {"role": "user", "content": f"사고 내용: {description}\n필드를 다음 형식으로 채우세요:\n\n사례명:\n발생일시:\n발생개요:\n발생장소:\n설비:\n발생원인:\n예상피해:\n위험성추정및결정:\n재발방지대책:"}
             ],
-            max_tokens=500,
+            max_tokens=700,
             temperature=0.7
         )
         print("✅ OpenAI API 호출 성공")
 
         generated_text = response.choices[0].message.content.strip()
-        sections = {"사례명": "", "발생일시": "", "발생장소": "", "발생개요": "", "설비": "", "발생원인": "", "예상피해": "", "재발방지대책": ""}
-
+        sections = {"사례명": "", "발생일시": "", "발생개요": "", "발생장소": "", "설비": "", "발생원인": "", "예상피해": "", "위험성추정및결정": "", "재발방지대책": ""}
         for line in generated_text.splitlines():
             for key in sections.keys():
                 if line.startswith(key):
                     sections[key] = line.replace(key + ":", "").strip()
 
         # 이미지 처리
-        image_path = ""
-        if image is not None and image.filename != "":
-            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            upload_dir = "uploads"
-            os.makedirs(upload_dir, exist_ok=True)
-            file_extension = image.filename.split(".")[-1]
-            file_name = f"{timestamp}.{file_extension}"
-            file_path = os.path.join(upload_dir, file_name)
+        before_image_path = ""
+        after_image_path = ""
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        if before_image is not None and before_image.filename != "":
+            before_file_ext = before_image.filename.split(".")[-1]
+            before_file_name = f"before_{timestamp}.{before_file_ext}"
+            before_file_path = os.path.join(upload_dir, before_file_name)
+            with open(before_file_path, "wb") as f:
+                f.write(await before_image.read())
+            before_image_path = f"/uploads/{before_file_name}"
+        if after_image is not None and after_image.filename != "":
+            after_file_ext = after_image.filename.split(".")[-1]
+            after_file_name = f"after_{timestamp}.{after_file_ext}"
+            after_file_path = os.path.join(upload_dir, after_file_name)
+            with open(after_file_path, "wb") as f:
+                f.write(await after_image.read())
+            after_image_path = f"/uploads/{after_file_name}"
 
-            with open(file_path, "wb") as f:
-                f.write(await image.read())
-            image_path = f"/uploads/{file_name}"
+        # 오늘 날짜를 작성일자로 자동 입력
+        today_str = datetime.now().strftime("%Y.%m.%d")
 
         return templates.TemplateResponse("preview.html", {
             "request": request,
-            "sections": sections,
-            "image_path": image_path,
-            "description": description
+            "department": department,
+            "position": position,
+            "name": name,
+            "작성일자": today_str,
+            "description": description,
+            "before_image_path": before_image_path,
+            "after_image_path": after_image_path,
+            **sections
         })
 
     except Exception as e:
@@ -240,25 +268,44 @@ async def preview_case(description: str = Form(...), image: UploadFile = File(No
         })
 
 @app.post("/submit", response_class=RedirectResponse)
-async def submit_case(description: str = Form(...), image: UploadFile = File(None)):
+async def submit_case(
+    department: str = Form(...),
+    position: str = Form(...),
+    name: str = Form(...),
+    작성일자: str = Form(...),
+    description: str = Form(...),
+    before_image_path: str = Form(""),
+    after_image_path: str = Form(""),
+    사례명: str = Form(...),
+    발생일시: str = Form(...),
+    발생개요: str = Form(...),
+    발생장소: str = Form(...),
+    설비: str = Form(...),
+    발생원인: str = Form(...),
+    예상피해: str = Form(...),
+    위험성추정및결정: str = Form(...),
+    재발방지대책: str = Form(...)):
     try:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        image_path = ""
-
-        # 이미지 저장
-        if image is not None and image.filename != "":
-            upload_dir = "uploads"
-            os.makedirs(upload_dir, exist_ok=True)
-            file_extension = image.filename.split(".")[-1]
-            file_name = f"{timestamp}.{file_extension}"
-            file_path = os.path.join(upload_dir, file_name)
-
-            with open(file_path, "wb") as f:
-                f.write(await image.read())
-            image_path = f"/uploads/{file_name}"
-
         # PDF 생성
-        pdf_path = generate_pdf(description, image_path, timestamp)
+        pdf_path = generate_pdf({
+            "department": department,
+            "position": position,
+            "name": name,
+            "작성일자": 작성일자,
+            "description": description,
+            "before_image_path": before_image_path,
+            "after_image_path": after_image_path,
+            "사례명": 사례명,
+            "발생일시": 발생일시,
+            "발생개요": 발생개요,
+            "발생장소": 발생장소,
+            "설비": 설비,
+            "발생원인": 발생원인,
+            "예상피해": 예상피해,
+            "위험성추정및결정": 위험성추정및결정,
+            "재발방지대책": 재발방지대책
+        }, timestamp)
         if pdf_path is None:
             return RedirectResponse(url="/?error=pdf_generation_failed", status_code=303)
 
@@ -266,7 +313,7 @@ async def submit_case(description: str = Form(...), image: UploadFile = File(Non
         conn = sqlite3.connect("reports.db")
         cursor = conn.cursor()
         cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", 
-                      (description, image_path, timestamp, pdf_path))
+                      (description, before_image_path, timestamp, pdf_path))
         conn.commit()
         conn.close()
 

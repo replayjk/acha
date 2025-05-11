@@ -34,17 +34,51 @@
             <small>API Key 상태: {{ api_key_status }}</small>
         </div>
         {% endif %}
+        <div class="api-status">
+            <h3>OpenAI API 상태</h3>
+            <p>API Key 상태: 
+                {% if api_key_status == "설정됨" %}
+                    <span class="status-ok">설정됨</span>
+                {% else %}
+                    <span class="status-error">설정되지 않음</span>
+                {% endif %}
+            </p>
+            {% if api_key_status == "설정됨" %}
+                <p>API Key 유효성: 
+                    {% if api_key_valid %}
+                        <span class="status-ok">유효함</span>
+                    {% else %}
+                        <span class="status-error">유효하지 않음</span>
+                    {% endif %}
+                </p>
+                <p class="api-message">{{ api_key_message }}</p>
+            {% endif %}
+        </div>
         <form id="caseForm" action="/preview" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="department">소속</label>
+                <input type="text" name="department" id="department" placeholder="소속을 입력하세요" required>
+            </div>
+            <div class="form-group">
+                <label for="position">직책</label>
+                <input type="text" name="position" id="position" placeholder="직책을 입력하세요" required>
+            </div>
+            <div class="form-group">
+                <label for="name">성명</label>
+                <input type="text" name="name" id="name" placeholder="성명을 입력하세요" required>
+            </div>
             <div class="form-group">
                 <label for="description">사례 내용</label>
                 <textarea name="description" id="description" rows="6" placeholder="사고 내용을 입력하세요..." required></textarea>
             </div>
-
             <div class="form-group">
-                <label for="image">사진 업로드</label>
-                <input type="file" name="image" id="image" accept="image/*">
+                <label for="before_image">개선 전 사진</label>
+                <input type="file" name="before_image" id="before_image" accept="image/*">
             </div>
-
+            <div class="form-group">
+                <label for="after_image">개선 후 사진</label>
+                <input type="file" name="after_image" id="after_image" accept="image/*">
+            </div>
             <div class="button-group">
                 <button type="submit" class="preview-button">미리보기</button>
             </div>

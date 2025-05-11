@@ -55,44 +55,118 @@
         .back-button:hover {
             background-color: #5a6268;
         }
+        .preview-table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        .preview-table th, .preview-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .preview-table th { background: #f2f2f2; }
+        .photo-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .photo-table th, .photo-table td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        .photo-label { font-weight: bold; }
+        .photo-img { max-width: 100%; max-height: 250px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📋 아차사고 사례 미리보기</h1>
+        <h1>아차사고 경험사례 미리보기</h1>
         
         {% if error %}
         <div class="error-message">
             {{ error }}
         </div>
         {% else %}
-        <div class="preview-container">
-            {% for title, content in sections.items() %}
-            <div class="section">
-                <div class="section-title">{{ title }}</div>
-                <div class="section-content">{{ content }}</div>
-            </div>
-            {% endfor %}
-
-            {% if image_path %}
-            <div class="section">
-                <div class="section-title">관련 사진</div>
-                <img src="{{ image_path }}" alt="Case Image" class="preview-image">
-            </div>
-            {% endif %}
+        <table class="preview-table">
+            <tr>
+                <th>작성일자</th>
+                <td>{{ 작성일자 }}</td>
+                <th>소속</th>
+                <td>{{ department }}</td>
+            </tr>
+            <tr>
+                <th>직책</th>
+                <td>{{ position }}</td>
+                <th>성명</th>
+                <td>{{ name }}</td>
+            </tr>
+            <tr>
+                <th>사례명</th>
+                <td colspan="3">{{ 사례명 }}</td>
+            </tr>
+            <tr>
+                <th>발생일시</th>
+                <td colspan="3">{{ 발생일시 }}</td>
+            </tr>
+            <tr>
+                <th>발생개요</th>
+                <td colspan="3">{{ 발생개요 }}</td>
+            </tr>
+            <tr>
+                <th>발생장소</th>
+                <td colspan="3">{{ 발생장소 }}</td>
+            </tr>
+            <tr>
+                <th>설비</th>
+                <td colspan="3">{{ 설비 }}</td>
+            </tr>
+            <tr>
+                <th>발생원인</th>
+                <td colspan="3">{{ 발생원인 }}</td>
+            </tr>
+            <tr>
+                <th>예상피해</th>
+                <td colspan="3">{{ 예상피해 }}</td>
+            </tr>
+            <tr>
+                <th>위험성추정및결정</th>
+                <td colspan="3">{{ 위험성추정및결정 }}</td>
+            </tr>
+            <tr>
+                <th>재발방지대책</th>
+                <td colspan="3">{{ 재발방지대책 }}</td>
+            </tr>
+        </table>
+        <div class="section-title">관련 사진</div>
+        <table class="photo-table">
+            <tr>
+                <th>개선 전 사진</th>
+                <th>개선 후 사진</th>
+            </tr>
+            <tr>
+                <td>
+                    {% if before_image_path %}
+                        <img src="{{ before_image_path }}" class="photo-img">
+                    {% else %}
+                        <span class="photo-label">(없음)</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if after_image_path %}
+                        <img src="{{ after_image_path }}" class="photo-img">
+                    {% else %}
+                        <span class="photo-label">(없음)</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        <div style="margin-top:20px;">
+            <form action="/submit" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="department" value="{{ department }}">
+                <input type="hidden" name="position" value="{{ position }}">
+                <input type="hidden" name="name" value="{{ name }}">
+                <input type="hidden" name="작성일자" value="{{ 작성일자 }}">
+                <input type="hidden" name="description" value="{{ description }}">
+                <input type="hidden" name="before_image_path" value="{{ before_image_path }}">
+                <input type="hidden" name="after_image_path" value="{{ after_image_path }}">
+                <input type="hidden" name="사례명" value="{{ 사례명 }}">
+                <input type="hidden" name="발생일시" value="{{ 발생일시 }}">
+                <input type="hidden" name="발생개요" value="{{ 발생개요 }}">
+                <input type="hidden" name="발생장소" value="{{ 발생장소 }}">
+                <input type="hidden" name="설비" value="{{ 설비 }}">
+                <input type="hidden" name="발생원인" value="{{ 발생원인 }}">
+                <input type="hidden" name="예상피해" value="{{ 예상피해 }}">
+                <input type="hidden" name="위험성추정및결정" value="{{ 위험성추정및결정 }}">
+                <input type="hidden" name="재발방지대책" value="{{ 재발방지대책 }}">
+                <button type="submit">최종 제출 및 PDF 생성</button>
+            </form>
         </div>
-
-        <form action="/submit" method="post" enctype="multipart/form-data">
-            <input type="hidden" name="description" value="{{ description }}">
-            {% if image_path %}
-            <input type="hidden" name="image_path" value="{{ image_path }}">
-            {% endif %}
-            
-            <div class="button-group">
-                <button type="button" class="back-button" onclick="history.back()">수정하기</button>
-                <button type="submit" class="submit-button">PDF 생성 및 저장</button>
-            </div>
-        </form>
         {% endif %}
     </div>
 </body>
