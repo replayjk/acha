@@ -12,11 +12,17 @@ import requests
 
 load_dotenv()
 
+# 환경변수 확인 및 설정
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-print(f"🔑 OpenAI API Key 확인: {'설정됨' if OPENAI_API_KEY else '설정되지 않음'}")
-if OPENAI_API_KEY:
-    print(f"🔑 API Key 길이: {len(OPENAI_API_KEY)}")
-    print(f"🔑 API Key 시작: {OPENAI_API_KEY[:8]}...")
+if not OPENAI_API_KEY:
+    print("🚨 경고: OPENAI_API_KEY가 설정되지 않았습니다!")
+    print("현재 환경변수 목록:")
+    for key in os.environ:
+        print(f"- {key}")
+else:
+    print(f"✅ OPENAI_API_KEY가 설정되었습니다. (길이: {len(OPENAI_API_KEY)})")
+    print(f"API Key 시작: {OPENAI_API_KEY[:8]}...")
+
 openai.api_key = OPENAI_API_KEY
 
 app = FastAPI()
@@ -154,7 +160,17 @@ def generate_pdf(description, image_path, timestamp):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    error = request.query_params.get('error')
+    error_message = None
+    if error == 'pdf_generation_failed':
+        error_message = "PDF 생성에 실패했습니다. OpenAI API Key가 올바르게 설정되어 있는지 확인해주세요."
+    elif error == 'submission_failed':
+        error_message = "제출 처리 중 오류가 발생했습니다. 다시 시도해주세요."
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "error_message": error_message,
+        "api_key_status": "설정됨" if OPENAI_API_KEY else "설정되지 않음"
+    })
 
 @app.get("/list", response_class=HTMLResponse)
 async def list_cases(request: Request):
