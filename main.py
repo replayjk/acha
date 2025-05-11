@@ -120,7 +120,7 @@ def generate_pdf(description, image_path, timestamp):
         pdf.output(pdf_path)
 
         print(f"✅ PDF 생성 완료: {pdf_path}")
-        return f"/pdf_reports/{pdf_filename}"
+        return pdf_filename  # **여기서 None으로 저장되지 않도록 수정**
 
     except Exception as e:
         print(f"🚨 PDF 생성 실패: {e}")
@@ -157,12 +157,12 @@ async def submit_case(description: str = Form(...), image: UploadFile = File(Non
         image_path = f"/uploads/{file_name}"
 
     # PDF 생성
-    pdf_path = generate_pdf(description, image_path, timestamp)
+    pdf_filename = generate_pdf(description, image_path, timestamp)
 
     # 데이터베이스 저장
     conn = sqlite3.connect("reports.db")
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", (description, image_path, timestamp, pdf_path))
+    cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", (description, image_path, timestamp, f"/pdf_reports/{pdf_filename}"))
     conn.commit()
     conn.close()
 
