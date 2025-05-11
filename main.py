@@ -24,8 +24,9 @@ app.mount("/pdf_reports", StaticFiles(directory="pdf_reports"), name="pdf_report
 templates = Jinja2Templates(directory="templates")
 
 # Database initialization
+DB_PATH = "./reports.db"
 def init_db():
-    conn = sqlite3.connect("reports.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS cases (
@@ -53,7 +54,6 @@ def generate_pdf(description, image_path, timestamp):
         font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf"
         font_path = "NotoSansCJKsc-Regular.otf"
         if not os.path.exists(font_path):
-            print("📝 Noto Sans CJK 폰트 다운로드 중...")
             response = requests.get(font_url)
             with open(font_path, "wb") as f:
                 f.write(response.content)
@@ -111,7 +111,7 @@ async def index(request: Request):
 
 @app.get("/list", response_class=HTMLResponse)
 async def list_cases(request: Request):
-    conn = sqlite3.connect("reports.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT id, description, image_path, timestamp, pdf_path FROM cases ORDER BY timestamp DESC")
     cases = cursor.fetchall()
@@ -140,7 +140,7 @@ async def submit_case(description: str = Form(...), image: UploadFile = File(Non
 
         # PDF 파일이 생성된 경우에만 DB에 저장
         if pdf_path is not None:
-            conn = sqlite3.connect("reports.db")
+            conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", 
                            (description, image_path, timestamp, pdf_path))
