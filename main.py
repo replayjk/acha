@@ -38,6 +38,7 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+
 init_db()
 
 # PDF generation function
@@ -48,11 +49,6 @@ def generate_pdf(description, image_path, timestamp):
         pdf_filename = f"{timestamp}.pdf"
         pdf_path = os.path.join(pdf_dir, pdf_filename)
 
-        # PDF 생성
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-
         # 폰트 설정
         font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf"
         font_path = "NotoSansCJKsc-Regular.otf"
@@ -62,6 +58,11 @@ def generate_pdf(description, image_path, timestamp):
             with open(font_path, "wb") as f:
                 f.write(response.content)
 
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+
+        # 폰트 등록
         pdf.add_font("NotoSansCJK", "", font_path, uni=True)
         pdf.set_font("NotoSansCJK", size=12)
 
@@ -70,7 +71,7 @@ def generate_pdf(description, image_path, timestamp):
         pdf.cell(0, 15, "아차사고 경험사례", ln=True, align="C")
         pdf.ln(10)
 
-        # 기본 정보
+        # 보고서 내용
         pdf.set_font_size(12)
         pdf.multi_cell(0, 10, f"사례명: {description}")
         pdf.multi_cell(0, 10, f"발생일시: {timestamp}")
@@ -80,6 +81,8 @@ def generate_pdf(description, image_path, timestamp):
         if image_path and image_path != "None":
             try:
                 image_full_path = image_path.strip("/")
+                pdf.set_fill_color(240, 240, 240)
+                pdf.cell(0, 10, "관련 사진", ln=True, fill=True)
                 pdf.image(image_full_path, x=15, w=180)
                 pdf.ln(10)
             except Exception as e:
@@ -98,45 +101,6 @@ def generate_pdf(description, image_path, timestamp):
     except Exception as e:
         print(f"PDF 생성 중 오류 발생: {e}")
         return None
-
-
-    # PDF 생성
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-
-    # 폰트 등록
-    pdf.add_font("NotoSansCJK", "", font_path, uni=True)
-    pdf.set_font("NotoSansCJK", size=12)
-
-    # 문서 상단 제목
-    pdf.set_font_size(24)
-    pdf.cell(0, 15, "아차사고 경험사례", ln=True, align="C")
-    pdf.ln(10)
-
-    # 보고서 표 양식 (1페이지 구성)
-    table_headers = ["사례명", "발생일시", "발생장소", "발생개요", "설비", "발생원인", "예상피해", "재발방지대책"]
-    pdf.set_font_size(12)
-    pdf.set_fill_color(240, 240, 240)
-    for header in table_headers:
-        pdf.cell(0, 10, f"{header}: {sections[header]}", ln=True, fill=True)
-        pdf.ln(2)
-
-    # 이미지 추가 (개선 전/후 사진)
-    if image_path and image_path != "None":
-        try:
-            image_full_path = image_path.strip("/")
-            pdf.set_fill_color(240, 240, 240)
-            pdf.cell(0, 10, "관련 사진", ln=True, fill=True)
-            pdf.image(image_full_path, x=15, w=180)
-            pdf.ln(10)
-        except Exception as e:
-            print(f"이미지 추가 중 오류 발생: {e}")
-
-    # PDF 저장
-    pdf.output(pdf_path)
-
-    return f"/pdf_reports/{pdf_filename}"
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -163,7 +127,6 @@ async def submit_case(description: str = Form(...), image: UploadFile = File(Non
         file_extension = image.filename.split(".")[-1]
         file_name = f"{timestamp}.{file_extension}"
         file_path = os.path.join(upload_dir, file_name)
-
         with open(file_path, "wb") as f:
             f.write(await image.read())
         image_path = f"/uploads/{file_name}"
@@ -171,11 +134,15 @@ async def submit_case(description: str = Form(...), image: UploadFile = File(Non
     # PDF 생성
     pdf_path = generate_pdf(description, image_path, timestamp)
 
-    # 데이터베이스 저장
-    conn = sqlite3.connect("reports.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", (description, image_path, timestamp, pdf_path))
-    conn.commit()
-    conn.close()
+    # PDF 파일이 생성된 경우에만 DB에 저장
+    if pdf_path is not None:
+        conn = sqlite3.connect("reports.db")
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", 
+                       (description, image_path, timestamp, pdf_path))
+        conn.commit()
+        conn.close()
+    else:
+        print("❌ PDF 생성 실패로 데이터베이스 저장 생략")
 
     return RedirectResponse(url="/list", status_code=303)
