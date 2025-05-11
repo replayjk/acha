@@ -25,20 +25,18 @@ else:
 
 openai.api_key = OPENAI_API_KEY
 
-# API Key 검증 함수
+# API Key 검증 함수 (openai 1.x 방식)
 def validate_api_key():
     try:
         if not OPENAI_API_KEY:
             return False, "API Key가 설정되지 않았습니다."
-        
-        # 간단한 API 호출로 검증
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # 가장 가벼운 모델 사용
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": "test"}],
             max_tokens=5
         )
         return True, "API Key가 유효합니다."
-    except openai.error.AuthenticationError:
+    except openai.AuthenticationError:
         return False, "API Key가 유효하지 않습니다."
     except Exception as e:
         return False, f"API Key 검증 중 오류 발생: {str(e)}"
@@ -204,9 +202,9 @@ async def preview_case(request: Request,
                 "error": f"OpenAI API Key 검증 실패: {message}"
             })
 
-        # GPT-4를 사용하여 필드 자동 채우기
+        # GPT-4를 사용하여 필드 자동 채우기 (openai 1.x 방식)
         print("🤖 OpenAI API 호출 중...")
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "너는 아차사고 사례를 작성하는 전문가입니다. 입력된 사고 내용을 바탕으로 사례명, 발생일시, 발생개요, 발생장소, 설비, 발생원인, 예상피해, 위험성추정및결정, 재발방지대책을 자동으로 작성하세요."},
