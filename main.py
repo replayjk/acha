@@ -63,8 +63,8 @@ def generate_pdf(description, image_path, timestamp):
             print("❌ 폰트 다운로드 실패")
             return None
 
-    # GPT-4를 사용하여 필드 자동 채우기
     try:
+        # GPT-4를 사용하여 필드 자동 채우기
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -83,47 +83,48 @@ def generate_pdf(description, image_path, timestamp):
                 if line.startswith(key):
                     sections[key] = line.replace(key + ":", "").strip()
 
+        # PDF 생성
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+
+        # 폰트 등록
+        pdf.add_font("NotoSansCJK", "", font_path, uni=True)
+        pdf.set_font("NotoSansCJK", size=12)
+
+        # 문서 상단 제목
+        pdf.set_font_size(24)
+        pdf.cell(0, 15, "아차사고 경험사례", ln=True, align="C")
+        pdf.ln(10)
+
+        # 보고서 표 양식 (1페이지 구성)
+        table_headers = ["사례명", "발생일시", "발생장소", "발생개요", "설비", "발생원인", "예상피해", "재발방지대책"]
+        pdf.set_font_size(12)
+        pdf.set_fill_color(240, 240, 240)
+        for header in table_headers:
+            pdf.cell(0, 10, f"{header}: {sections[header]}", ln=True, fill=True)
+            pdf.ln(2)
+
+        # 이미지 추가 (개선 전/후 사진)
+        if image_path and image_path != "None":
+            try:
+                image_full_path = image_path.lstrip("/")
+                pdf.set_fill_color(240, 240, 240)
+                pdf.cell(0, 10, "관련 사진", ln=True, fill=True)
+                pdf.image(image_full_path, x=15, w=180)
+                pdf.ln(10)
+            except Exception as e:
+                print(f"이미지 추가 중 오류 발생: {e}")
+
+        # PDF 저장
+        pdf.output(pdf_path)
+
+        print(f"✅ PDF 생성 완료: {pdf_path}")
+        return f"/pdf_reports/{pdf_filename}"
+
     except Exception as e:
-        print(f"GPT 처리 중 오류 발생: {e}")
+        print(f"🚨 PDF 생성 실패: {e}")
         return None
-
-    # PDF 생성
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-
-    # 폰트 등록
-    pdf.add_font("NotoSansCJK", "", font_path, uni=True)
-    pdf.set_font("NotoSansCJK", size=12)
-
-    # 문서 상단 제목
-    pdf.set_font_size(24)
-    pdf.cell(0, 15, "아차사고 경험사례", ln=True, align="C")
-    pdf.ln(10)
-
-    # 보고서 표 양식 (1페이지 구성)
-    table_headers = ["사례명", "발생일시", "발생장소", "발생개요", "설비", "발생원인", "예상피해", "재발방지대책"]
-    pdf.set_font_size(12)
-    pdf.set_fill_color(240, 240, 240)
-    for header in table_headers:
-        pdf.cell(0, 10, f"{header}: {sections[header]}", ln=True, fill=True)
-        pdf.ln(2)
-
-    # 이미지 추가 (개선 전/후 사진)
-    if image_path and image_path != "None":
-        try:
-            image_full_path = image_path.strip("/")
-            pdf.set_fill_color(240, 240, 240)
-            pdf.cell(0, 10, "관련 사진", ln=True, fill=True)
-            pdf.image(image_full_path, x=15, w=180)
-            pdf.ln(10)
-        except Exception as e:
-            print(f"이미지 추가 중 오류 발생: {e}")
-
-    # PDF 저장
-    pdf.output(pdf_path)
-
-    return f"/pdf_reports/{pdf_filename}"
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
