@@ -73,7 +73,10 @@ def generate_pdf(description, image_path, timestamp):
 
         # 보고서 내용
         pdf.set_font_size(12)
-        pdf.multi_cell(0, 10, f"사례명: {description}")
+        if description:
+            pdf.multi_cell(0, 10, f"사례명: {description}")
+        else:
+            pdf.multi_cell(0, 10, "사례명: (내용 없음)")
         pdf.multi_cell(0, 10, f"발생일시: {timestamp}")
         pdf.ln(5)
 
@@ -117,32 +120,38 @@ async def list_cases(request: Request):
 
 @app.post("/submit", response_class=RedirectResponse)
 async def submit_case(description: str = Form(...), image: UploadFile = File(None)):
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    image_path = ""
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        image_path = ""
 
-    # 이미지 저장
-    if image is not None and image.filename != "":
-        upload_dir = "uploads/"
-        os.makedirs(upload_dir, exist_ok=True)
-        file_extension = image.filename.split(".")[-1]
-        file_name = f"{timestamp}.{file_extension}"
-        file_path = os.path.join(upload_dir, file_name)
-        with open(file_path, "wb") as f:
-            f.write(await image.read())
-        image_path = f"/uploads/{file_name}"
+        # 이미지 저장
+        if image is not None and image.filename != "":
+            upload_dir = "uploads/"
+            os.makedirs(upload_dir, exist_ok=True)
+            file_extension = image.filename.split(".")[-1]
+            file_name = f"{timestamp}.{file_extension}"
+            file_path = os.path.join(upload_dir, file_name)
+            with open(file_path, "wb") as f:
+                f.write(await image.read())
+            image_path = f"/uploads/{file_name}"
 
-    # PDF 생성
-    pdf_path = generate_pdf(description, image_path, timestamp)
+        # PDF 생성
+        pdf_path = generate_pdf(description, image_path, timestamp)
 
-    # PDF 파일이 생성된 경우에만 DB에 저장
-    if pdf_path is not None:
-        conn = sqlite3.connect("reports.db")
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", 
-                       (description, image_path, timestamp, pdf_path))
-        conn.commit()
-        conn.close()
-    else:
-        print("❌ PDF 생성 실패로 데이터베이스 저장 생략")
+        # PDF 파일이 생성된 경우에만 DB에 저장
+        if pdf_path is not None:
+            conn = sqlite3.connect("reports.db")
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", 
+                           (description, image_path, timestamp, pdf_path))
+            conn.commit()
+            conn.close()
+            print("✅ 데이터베이스 저장 완료")
+        else:
+            print("❌ PDF 생성 실패로 데이터베이스 저장 생략")
 
-    return RedirectResponse(url="/list", status_code=303)
+        return RedirectResponse(url="/list", status_code=303)
+
+    except Exception as e:
+        print(f"사례 등록 중 오류 발생: {e}")
+        return RedirectResponse(url="/", status_code=303)
