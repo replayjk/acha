@@ -1,0 +1,17 @@
+# Python cache files
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+
+# Database files
+reports.db
+
+# Upload directories
+uploads/
+pdf_reports/
+cases/
+
+# Vercel build files
+.vercel/
