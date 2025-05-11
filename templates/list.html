@@ -5,25 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>아차사고 사례 목록</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .case-image {
+            max-width: 300px;
+            max-height: 200px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>📋 아차사고 사례 목록</h1>
         <ul>
-            {% for case in cases %}
-            <li class="case-item">
-                <h3>사례 ID: {{ case[0] }}</h3>
-                <p><strong>사례 내용:</strong> {{ case[1] }}</p>
-                {% if case[2] %}
-                <img src="{{ case[2] }}" alt="Case Image" class="case-image">
-                {% endif %}
-                <p><strong>등록일시:</strong> {{ case[3] }}</p>
-                <a href="{{ case[4] }}" target="_blank">PDF 보기</a>
-                <hr>
-            </li>
-            {% empty %}
-            <p>등록된 사례가 없습니다.</p>
-            {% endfor %}
+            {% if cases %}
+                {% for case in cases %}
+                <li class="case-item">
+                    <h3>사례 ID: {{ case[0] }}</h3>
+                    <p><strong>사례 내용:</strong> {{ case[1] }}</p>
+                    {% if case[2] and case[2] != "None" %}
+                    <img src="{{ case[2] }}" alt="Case Image" class="case-image">
+                    {% endif %}
+                    <p><strong>등록일시:</strong> {{ case[3] }}</p>
+                    <a href="{{ case[4] }}" target="_blank">📄 PDF 보기</a>
+                    <hr>
+                </li>
+                {% endfor %}
+            {% else %}
+                <p>등록된 사례가 없습니다.</p>
+            {% endif %}
         </ul>
         <br>
         <a href="/">새 사례 등록</a>

@@ -1,7 +1,7 @@
 fastapi
-jinja2
-fpdf
-python-dotenv
-openai
 uvicorn
-python-multipart
+Jinja2
+python-dotenv
+requests
+openai
+fpdf
