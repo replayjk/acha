@@ -13,6 +13,10 @@ import requests
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+print(f"🔑 OpenAI API Key 확인: {'설정됨' if OPENAI_API_KEY else '설정되지 않음'}")
+if OPENAI_API_KEY:
+    print(f"🔑 API Key 길이: {len(OPENAI_API_KEY)}")
+    print(f"🔑 API Key 시작: {OPENAI_API_KEY[:8]}...")
 openai.api_key = OPENAI_API_KEY
 
 app = FastAPI()
@@ -46,6 +50,11 @@ def generate_pdf(description, image_path, timestamp):
         if not OPENAI_API_KEY:
             print("🚨 OpenAI API Key가 설정되지 않았습니다.")
             return None
+
+        print(f"🔑 PDF 생성 시작 - API Key 상태: {'설정됨' if OPENAI_API_KEY else '설정되지 않음'}")
+        if OPENAI_API_KEY:
+            print(f"🔑 API Key 길이: {len(OPENAI_API_KEY)}")
+            print(f"🔑 API Key 시작: {OPENAI_API_KEY[:8]}...")
 
         pdf_dir = "pdf_reports"
         os.makedirs(pdf_dir, exist_ok=True)
