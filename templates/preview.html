@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아차사고 사례 미리보기</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .preview-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .section-title {
+            font-weight: bold;
+            color: #3366cc;
+            margin-bottom: 5px;
+        }
+        .section-content {
+            color: #333;
+        }
+        .preview-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .button-group button {
+            flex: 1;
+        }
+        .submit-button {
+            background-color: #3366cc;
+        }
+        .submit-button:hover {
+            background-color: #254e8c;
+        }
+        .back-button {
+            background-color: #6c757d;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 아차사고 사례 미리보기</h1>
+        
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% else %}
+        <div class="preview-container">
+            {% for title, content in sections.items() %}
+            <div class="section">
+                <div class="section-title">{{ title }}</div>
+                <div class="section-content">{{ content }}</div>
+            </div>
+            {% endfor %}
+
+            {% if image_path %}
+            <div class="section">
+                <div class="section-title">관련 사진</div>
+                <img src="{{ image_path }}" alt="Case Image" class="preview-image">
+            </div>
+            {% endif %}
+        </div>
+
+        <form action="/submit" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="description" value="{{ description }}">
+            {% if image_path %}
+            <input type="hidden" name="image_path" value="{{ image_path }}">
+            {% endif %}
+            
+            <div class="button-group">
+                <button type="button" class="back-button" onclick="history.back()">수정하기</button>
+                <button type="submit" class="submit-button">PDF 생성 및 저장</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</body>
+</html> 

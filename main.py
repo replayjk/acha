@@ -181,6 +181,64 @@ async def list_cases(request: Request):
     conn.close()
     return templates.TemplateResponse("list.html", {"request": request, "cases": cases})
 
+@app.post("/preview", response_class=HTMLResponse)
+async def preview_case(description: str = Form(...), image: UploadFile = File(None)):
+    try:
+        if not OPENAI_API_KEY:
+            return templates.TemplateResponse("preview.html", {
+                "request": request,
+                "error": "OpenAI API Key가 설정되지 않았습니다."
+            })
+
+        # GPT-4를 사용하여 필드 자동 채우기
+        print("🤖 OpenAI API 호출 중...")
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "너는 아차사고 사례를 작성하는 전문가입니다. 입력된 사고 내용을 바탕으로 사례명, 발생일시, 발생장소, 발생개요, 설비, 발생원인, 예상피해, 재발방지대책을 자동으로 작성하세요."},
+                {"role": "user", "content": f"사고 내용: {description}\n필드를 다음 형식으로 채우세요:\n\n사례명:\n발생일시:\n발생장소:\n발생개요:\n설비:\n발생원인:\n예상피해:\n재발방지대책:"}
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
+        print("✅ OpenAI API 호출 성공")
+
+        generated_text = response.choices[0].message.content.strip()
+        sections = {"사례명": "", "발생일시": "", "발생장소": "", "발생개요": "", "설비": "", "발생원인": "", "예상피해": "", "재발방지대책": ""}
+
+        for line in generated_text.splitlines():
+            for key in sections.keys():
+                if line.startswith(key):
+                    sections[key] = line.replace(key + ":", "").strip()
+
+        # 이미지 처리
+        image_path = ""
+        if image is not None and image.filename != "":
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            upload_dir = "uploads"
+            os.makedirs(upload_dir, exist_ok=True)
+            file_extension = image.filename.split(".")[-1]
+            file_name = f"{timestamp}.{file_extension}"
+            file_path = os.path.join(upload_dir, file_name)
+
+            with open(file_path, "wb") as f:
+                f.write(await image.read())
+            image_path = f"/uploads/{file_name}"
+
+        return templates.TemplateResponse("preview.html", {
+            "request": request,
+            "sections": sections,
+            "image_path": image_path,
+            "description": description
+        })
+
+    except Exception as e:
+        print(f"🚨 미리보기 생성 중 예외 발생: {str(e)}")
+        return templates.TemplateResponse("preview.html", {
+            "request": request,
+            "error": f"미리보기 생성 중 오류가 발생했습니다: {str(e)}"
+        })
+
 @app.post("/submit", response_class=RedirectResponse)
 async def submit_case(description: str = Form(...), image: UploadFile = File(None)):
     try:
@@ -202,7 +260,6 @@ async def submit_case(description: str = Form(...), image: UploadFile = File(Non
         # PDF 생성
         pdf_path = generate_pdf(description, image_path, timestamp)
         if pdf_path is None:
-            print("🚨 PDF 생성 실패로 인해 데이터베이스 저장을 건너뜁니다.")
             return RedirectResponse(url="/?error=pdf_generation_failed", status_code=303)
 
         # 데이터베이스 저장

@@ -8,6 +8,20 @@
     <link rel="stylesheet" href="/static/style.css">
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .button-group button {
+            flex: 1;
+        }
+        .preview-button {
+            background-color: #28a745;
+        }
+        .preview-button:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -20,10 +34,10 @@
             <small>API Key 상태: {{ api_key_status }}</small>
         </div>
         {% endif %}
-        <form action="/submit" method="post" enctype="multipart/form-data">
+        <form id="caseForm" action="/preview" method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="description">사례 내용</label>
-                <textarea name="description" id="description" rows="6" placeholder="사고 내용을 입력하세요..."></textarea>
+                <textarea name="description" id="description" rows="6" placeholder="사고 내용을 입력하세요..." required></textarea>
             </div>
 
             <div class="form-group">
@@ -31,8 +45,8 @@
                 <input type="file" name="image" id="image" accept="image/*">
             </div>
 
-            <div class="button-container">
-                <button type="submit">제출하기</button>
+            <div class="button-group">
+                <button type="submit" class="preview-button">미리보기</button>
             </div>
         </form>
     </div>
