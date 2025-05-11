@@ -13,6 +13,15 @@
 <body>
     <div class="container">
         <h1>📝 아차사고 사례 등록</h1>
+        {% if request.query_params.get('error') == 'pdf_generation_failed' %}
+        <div class="error-message">
+            PDF 생성에 실패했습니다. OpenAI API Key가 올바르게 설정되어 있는지 확인해주세요.
+        </div>
+        {% elif request.query_params.get('error') == 'submission_failed' %}
+        <div class="error-message">
+            제출 처리 중 오류가 발생했습니다. 다시 시도해주세요.
+        </div>
+        {% endif %}
         <form action="/submit" method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="description">사례 내용</label>
