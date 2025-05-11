@@ -42,50 +42,63 @@ init_db()
 
 # PDF generation function
 def generate_pdf(description, image_path, timestamp):
-    pdf_dir = "pdf_reports/"
-    os.makedirs(pdf_dir, exist_ok=True)
-    pdf_filename = f"{timestamp}.pdf"
-    pdf_path = os.path.join(pdf_dir, pdf_filename)
+    try:
+        pdf_dir = "pdf_reports/"
+        os.makedirs(pdf_dir, exist_ok=True)
+        pdf_filename = f"{timestamp}.pdf"
+        pdf_path = os.path.join(pdf_dir, pdf_filename)
 
-    # 폰트 설정 (Noto Sans CJK)
-    font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf"
-    font_path = "NotoSansCJKsc-Regular.otf"
+        # PDF 생성
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
 
-    # 폰트 다운로드 (없으면 다운로드)
-    if not os.path.exists(font_path):
-        print("📝 Noto Sans CJK 폰트 다운로드 중...")
-        response = requests.get(font_url)
-        if response.status_code == 200:
+        # 폰트 설정
+        font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf"
+        font_path = "NotoSansCJKsc-Regular.otf"
+        if not os.path.exists(font_path):
+            print("📝 Noto Sans CJK 폰트 다운로드 중...")
+            response = requests.get(font_url)
             with open(font_path, "wb") as f:
                 f.write(response.content)
-            print("✅ 폰트 다운로드 완료")
+
+        pdf.add_font("NotoSansCJK", "", font_path, uni=True)
+        pdf.set_font("NotoSansCJK", size=12)
+
+        # 제목
+        pdf.set_font_size(24)
+        pdf.cell(0, 15, "아차사고 경험사례", ln=True, align="C")
+        pdf.ln(10)
+
+        # 기본 정보
+        pdf.set_font_size(12)
+        pdf.multi_cell(0, 10, f"사례명: {description}")
+        pdf.multi_cell(0, 10, f"발생일시: {timestamp}")
+        pdf.ln(5)
+
+        # 이미지 추가
+        if image_path and image_path != "None":
+            try:
+                image_full_path = image_path.strip("/")
+                pdf.image(image_full_path, x=15, w=180)
+                pdf.ln(10)
+            except Exception as e:
+                print(f"이미지 추가 중 오류 발생: {e}")
+
+        # PDF 저장
+        pdf.output(pdf_path)
+
+        # 파일이 정상적으로 생성되었는지 확인
+        if os.path.exists(pdf_path):
+            return f"/pdf_reports/{pdf_filename}"
         else:
-            print("❌ 폰트 다운로드 실패")
+            print("❌ PDF 파일 생성 실패")
             return None
 
-    # GPT-4를 사용하여 필드 자동 채우기
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "너는 아차사고 사례를 작성하는 전문가입니다. 입력된 사고 내용을 바탕으로 사례명, 발생일시, 발생장소, 발생개요, 설비, 발생원인, 예상피해, 재발방지대책을 자동으로 작성하세요."},
-                {"role": "user", "content": f"사고 내용: {description}\n필드를 다음 형식으로 채우세요:\n\n사례명:\n발생일시:\n발생장소:\n발생개요:\n설비:\n발생원인:\n예상피해:\n재발방지대책:"}
-            ],
-            max_tokens=500,
-            temperature=0.7
-        )
-
-        generated_text = response.choices[0].message.content.strip()
-        sections = {"사례명": "", "발생일시": "", "발생장소": "", "발생개요": "", "설비": "", "발생원인": "", "예상피해": "", "재발방지대책": ""}
-
-        for line in generated_text.splitlines():
-            for key in sections.keys():
-                if line.startswith(key):
-                    sections[key] = line.replace(key + ":", "").strip()
-
     except Exception as e:
-        print(f"GPT 처리 중 오류 발생: {e}")
+        print(f"PDF 생성 중 오류 발생: {e}")
         return None
+
 
     # PDF 생성
     pdf = FPDF()
