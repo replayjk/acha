@@ -4,3 +4,4 @@ fpdf
 python-dotenv
 openai
 uvicorn
+python-multipart
