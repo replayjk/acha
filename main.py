@@ -86,7 +86,7 @@ def generate_pdf(description, image_path, timestamp):
                 image_full_path = image_path.strip("/")
                 pdf.set_fill_color(240, 240, 240)
                 pdf.cell(0, 10, "관련 사진", ln=True, fill=True)
-                pdf.image(image_full_path, x=15, w=180)
+                pdf.image("." + image_full_path, x=15, w=180)
                 pdf.ln(10)
             except Exception as e:
                 print(f"이미지 추가 중 오류 발생: {e}")
@@ -94,7 +94,7 @@ def generate_pdf(description, image_path, timestamp):
         # PDF 저장
         pdf.output(pdf_path)
 
-        # 파일이 정상적으로 생성되었는지 확인
+        # 파일이 정상적으로 생성된 경우에만 경로 반환
         if os.path.exists(pdf_path):
             return f"/pdf_reports/{pdf_filename}"
         else:
