@@ -5,3 +5,4 @@ Jinja2
 requests
 openai
 fpdf
+python-multipart
