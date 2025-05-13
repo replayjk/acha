@@ -177,6 +177,18 @@ def generate_image(data, timestamp):
         img_filename = f"{timestamp}.png"
         img_path = os.path.join(img_dir, img_filename)
 
+        # 폰트 다운로드 및 설정
+        font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/Korean/NotoSansCJKkr-Regular.otf"
+        font_path = "NotoSansCJKkr-Regular.otf"
+        if not os.path.exists(font_path):
+            response = requests.get(font_url)
+            if response.status_code == 200:
+                with open(font_path, "wb") as f:
+                    f.write(response.content)
+            else:
+                print(f"❌ 폰트 다운로드 실패: {response.status_code}")
+                return None
+
         # Chrome 옵션 설정
         chrome_options = Options()
         chrome_options.add_argument('--headless')
@@ -193,11 +205,40 @@ def generate_image(data, timestamp):
             <html>
             <head>
                 <style>
-                    body {{ font-family: Arial, sans-serif; padding: 20px; }}
-                    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-                    th, td {{ border: 1px solid black; padding: 8px; text-align: left; }}
-                    th {{ background-color: #f2f2f2; }}
-                    img {{ max-width: 300px; max-height: 200px; }}
+                    @font-face {{
+                        font-family: 'Noto Sans KR';
+                        src: url('file:///{os.path.abspath(font_path)}') format('opentype');
+                    }}
+                    body {{ 
+                        font-family: 'Noto Sans KR', sans-serif; 
+                        padding: 20px;
+                        line-height: 1.6;
+                    }}
+                    table {{ 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-bottom: 20px;
+                    }}
+                    th, td {{ 
+                        border: 1px solid black; 
+                        padding: 8px; 
+                        text-align: left;
+                        word-break: keep-all;
+                    }}
+                    th {{ 
+                        background-color: #f2f2f2;
+                        width: 20%;
+                    }}
+                    img {{ 
+                        max-width: 300px; 
+                        max-height: 200px;
+                        object-fit: contain;
+                    }}
+                    h1 {{
+                        text-align: center;
+                        margin-bottom: 30px;
+                        color: #333;
+                    }}
                 </style>
             </head>
             <body>
@@ -228,11 +269,11 @@ def generate_image(data, timestamp):
                         <th>개선 후 사진</th>
                     </tr>
                     <tr>
-                        <td>
-                            {'<img src="' + data["before_image_path"] + '">' if data["before_image_path"] else '(없음)'}
+                        <td style="text-align: center;">
+                            {'<img src="' + data["before_image_path"].lstrip("/") + '">' if data["before_image_path"] else '(없음)'}
                         </td>
-                        <td>
-                            {'<img src="' + data["after_image_path"] + '">' if data["after_image_path"] else '(없음)'}
+                        <td style="text-align: center;">
+                            {'<img src="' + data["after_image_path"].lstrip("/") + '">' if data["after_image_path"] else '(없음)'}
                         </td>
                     </tr>
                 </table>
@@ -247,6 +288,8 @@ def generate_image(data, timestamp):
             
             # HTML 파일을 로드하고 스크린샷 캡처
             driver.get(f"file:///{os.path.abspath(temp_html)}")
+            # 페이지가 완전히 로드될 때까지 잠시 대기
+            driver.implicitly_wait(2)
             driver.save_screenshot(img_path)
             
             # 임시 HTML 파일 삭제
