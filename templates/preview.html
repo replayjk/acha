@@ -59,9 +59,28 @@
         .preview-table th, .preview-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         .preview-table th { background: #f2f2f2; }
         .photo-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .photo-table th, .photo-table td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        .photo-table th, .photo-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         .photo-label { font-weight: bold; }
-        .photo-img { max-width: 100%; max-height: 250px; }
+        .photo-img { max-width: 100%; max-height: 200px; object-fit: contain; }
+        @media screen and (max-width: 768px) {
+            .preview-container {
+                padding: 10px;
+            }
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin-bottom: 20px;
+            }
+            table {
+                min-width: 600px;
+            }
+            .photo-table {
+                min-width: auto;
+            }
+            .photo-img {
+                max-height: 150px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -73,80 +92,84 @@
             {{ error }}
         </div>
         {% else %}
-        <table class="preview-table">
-            <tr>
-                <th>작성일자</th>
-                <td>{{ 작성일자 }}</td>
-                <th>소속</th>
-                <td>{{ department }}</td>
-            </tr>
-            <tr>
-                <th>직책</th>
-                <td>{{ position }}</td>
-                <th>성명</th>
-                <td>{{ name }}</td>
-            </tr>
-            <tr>
-                <th>사례명</th>
-                <td colspan="3">{{ 사례명 }}</td>
-            </tr>
-            <tr>
-                <th>발생일시</th>
-                <td colspan="3">{{ 발생일시 }}</td>
-            </tr>
-            <tr>
-                <th>발생개요</th>
-                <td colspan="3">{{ 발생개요 }}</td>
-            </tr>
-            <tr>
-                <th>발생장소</th>
-                <td colspan="3">{{ 발생장소 }}</td>
-            </tr>
-            <tr>
-                <th>설비</th>
-                <td colspan="3">{{ 설비 }}</td>
-            </tr>
-            <tr>
-                <th>발생원인</th>
-                <td colspan="3">{{ 발생원인 }}</td>
-            </tr>
-            <tr>
-                <th>예상피해</th>
-                <td colspan="3">{{ 예상피해 }}</td>
-            </tr>
-            <tr>
-                <th>위험성추정및결정</th>
-                <td colspan="3">{{ 위험성추정및결정 }}</td>
-            </tr>
-            <tr>
-                <th>재발방지대책</th>
-                <td colspan="3">{{ 재발방지대책 }}</td>
-            </tr>
-        </table>
+        <div class="table-container">
+            <table class="preview-table">
+                <tr>
+                    <th>작성일자</th>
+                    <td>{{ 작성일자 }}</td>
+                    <th>소속</th>
+                    <td>{{ department }}</td>
+                </tr>
+                <tr>
+                    <th>직책</th>
+                    <td>{{ position }}</td>
+                    <th>성명</th>
+                    <td>{{ name }}</td>
+                </tr>
+                <tr>
+                    <th>사례명</th>
+                    <td colspan="3">{{ 사례명 }}</td>
+                </tr>
+                <tr>
+                    <th>발생일시</th>
+                    <td colspan="3">{{ 발생일시 }}</td>
+                </tr>
+                <tr>
+                    <th>발생개요</th>
+                    <td colspan="3">{{ 발생개요 }}</td>
+                </tr>
+                <tr>
+                    <th>발생장소</th>
+                    <td colspan="3">{{ 발생장소 }}</td>
+                </tr>
+                <tr>
+                    <th>설비</th>
+                    <td colspan="3">{{ 설비 }}</td>
+                </tr>
+                <tr>
+                    <th>발생원인</th>
+                    <td colspan="3">{{ 발생원인 }}</td>
+                </tr>
+                <tr>
+                    <th>예상피해</th>
+                    <td colspan="3">{{ 예상피해 }}</td>
+                </tr>
+                <tr>
+                    <th>위험성추정및결정</th>
+                    <td colspan="3">{{ 위험성추정및결정 }}</td>
+                </tr>
+                <tr>
+                    <th>재발방지대책</th>
+                    <td colspan="3">{{ 재발방지대책 }}</td>
+                </tr>
+            </table>
+        </div>
         <div class="section-title">관련 사진</div>
-        <table class="photo-table">
-            <tr>
-                <th>개선 전 사진</th>
-                <th>개선 후 사진</th>
-            </tr>
-            <tr>
-                <td>
-                    {% if before_image_path %}
-                        <img src="{{ before_image_path }}" class="photo-img">
-                    {% else %}
-                        <span class="photo-label">(없음)</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if after_image_path %}
-                        <img src="{{ after_image_path }}" class="photo-img">
-                    {% else %}
-                        <span class="photo-label">(없음)</span>
-                    {% endif %}
-                </td>
-            </tr>
-        </table>
-        <div style="margin-top:20px;">
+        <div class="table-container">
+            <table class="photo-table">
+                <tr>
+                    <th>개선 전 사진</th>
+                    <th>개선 후 사진</th>
+                </tr>
+                <tr>
+                    <td>
+                        {% if before_image_path %}
+                            <img src="{{ before_image_path }}" class="photo-img" alt="개선 전 사진">
+                        {% else %}
+                            <span class="photo-label">(없음)</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if after_image_path %}
+                            <img src="{{ after_image_path }}" class="photo-img" alt="개선 후 사진">
+                        {% else %}
+                            <span class="photo-label">(없음)</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="button-group">
             <form action="/submit" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="department" value="{{ department }}">
                 <input type="hidden" name="position" value="{{ position }}">
@@ -164,7 +187,7 @@
                 <input type="hidden" name="예상피해" value="{{ 예상피해 }}">
                 <input type="hidden" name="위험성추정및결정" value="{{ 위험성추정및결정 }}">
                 <input type="hidden" name="재발방지대책" value="{{ 재발방지대책 }}">
-                <button type="submit">최종 제출 및 PDF 생성</button>
+                <button type="submit">최종 제출</button>
             </form>
         </div>
         {% endif %}

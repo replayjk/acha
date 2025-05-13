@@ -4,36 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>아차사고 사례 목록</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <style>
+        .case-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .case-item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
         .case-image {
-            max-width: 300px;
-            max-height: 200px;
-            margin-bottom: 15px;
-            border-radius: 10px;
-            border: 1px solid #ccc;
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: block;
+        }
+        .case-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin: 5px 0;
         }
         .report-links {
             display: flex;
             gap: 10px;
-            margin-top: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
         }
         .report-links a {
-            padding: 5px 10px;
+            padding: 8px 15px;
             background-color: #f0f0f0;
             border-radius: 5px;
             text-decoration: none;
             color: #333;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         .report-links a:hover {
             background-color: #e0e0e0;
+        }
+        .new-case-button {
+            display: inline-block;
+            background-color: #3366cc;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .new-case-button:hover {
+            background-color: #2855ab;
+            color: white;
+        }
+        @media screen and (max-width: 480px) {
+            .case-item {
+                padding: 12px;
+            }
+            .report-links {
+                flex-direction: column;
+            }
+            .report-links a {
+                width: 100%;
+                text-align: center;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📋 아차사고 사례 목록</h1>
-        <ul>
+        <ul class="case-list">
             {% if cases %}
                 {% for case in cases %}
                 <li class="case-item">
@@ -42,7 +92,7 @@
                     {% if case[2] and case[2] != "None" %}
                     <img src="{{ case[2] }}" alt="Case Image" class="case-image">
                     {% endif %}
-                    <p><strong>등록일시:</strong> {{ case[3] }}</p>
+                    <p class="case-meta"><strong>등록일시:</strong> {{ case[3] }}</p>
                     <div class="report-links">
                         {% if case[4] %}
                         <a href="{{ case[4] }}" target="_blank">📄 PDF 보기</a>
@@ -51,15 +101,13 @@
                         <a href="{{ case[5] }}" target="_blank">🖼️ 이미지 보기</a>
                         {% endif %}
                     </div>
-                    <hr>
                 </li>
                 {% endfor %}
             {% else %}
                 <p>등록된 사례가 없습니다.</p>
             {% endif %}
         </ul>
-        <br>
-        <a href="/">새 사례 등록</a>
+        <a href="/" class="new-case-button">새 사례 등록</a>
     </div>
 </body>
 </html>
