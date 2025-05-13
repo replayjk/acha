@@ -6,3 +6,5 @@ requests
 openai
 fpdf
 python-multipart
+selenium
+pillow

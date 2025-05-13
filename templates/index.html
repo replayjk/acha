@@ -22,6 +22,12 @@
         .preview-button:hover {
             background-color: #218838;
         }
+        .api-status {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #28a745;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -30,30 +36,13 @@
         {% if error_message %}
         <div class="error-message">
             {{ error_message }}
-            <br>
-            <small>API Key 상태: {{ api_key_status }}</small>
         </div>
         {% endif %}
+        {% if api_key_valid %}
         <div class="api-status">
-            <h3>OpenAI API 상태</h3>
-            <p>API Key 상태: 
-                {% if api_key_status == "설정됨" %}
-                    <span class="status-ok">설정됨</span>
-                {% else %}
-                    <span class="status-error">설정되지 않음</span>
-                {% endif %}
-            </p>
-            {% if api_key_status == "설정됨" %}
-                <p>API Key 유효성: 
-                    {% if api_key_valid %}
-                        <span class="status-ok">유효함</span>
-                    {% else %}
-                        <span class="status-error">유효하지 않음</span>
-                    {% endif %}
-                </p>
-                <p class="api-message">{{ api_key_message }}</p>
-            {% endif %}
+            ✅ API 키가 유효합니다
         </div>
+        {% endif %}
         <form id="caseForm" action="/preview" method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="department">소속</label>

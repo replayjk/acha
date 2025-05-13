@@ -12,6 +12,7 @@ reports.db
 uploads/
 pdf_reports/
 cases/
+image_reports/
 
 # Vercel build files
 .vercel/

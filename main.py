@@ -9,6 +9,10 @@ from dotenv import load_dotenv
 import openai
 from fpdf import FPDF
 import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from PIL import Image
+import io
 
 load_dotenv()
 
@@ -66,7 +70,8 @@ def init_db():
             description TEXT,
             image_path TEXT,
             timestamp TEXT,
-            pdf_path TEXT
+            pdf_path TEXT,
+            report_image_path TEXT
         )
     ''')
     conn.commit()
@@ -157,12 +162,103 @@ def generate_pdf(data, timestamp):
         print(f"🚨 PDF 생성 중 예외 발생: {str(e)}")
         return None
 
+def generate_image(data, timestamp):
+    try:
+        # 이미지 저장 디렉토리 생성
+        img_dir = "image_reports"
+        os.makedirs(img_dir, exist_ok=True)
+        img_filename = f"{timestamp}.png"
+        img_path = os.path.join(img_dir, img_filename)
+
+        # Chrome 옵션 설정
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--window-size=1920,1080')
+
+        # Selenium WebDriver 초기화
+        driver = webdriver.Chrome(options=chrome_options)
+        
+        try:
+            # HTML 템플릿 생성
+            html_content = f"""
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; padding: 20px; }}
+                    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+                    th, td {{ border: 1px solid black; padding: 8px; text-align: left; }}
+                    th {{ background-color: #f2f2f2; }}
+                    img {{ max-width: 300px; max-height: 200px; }}
+                </style>
+            </head>
+            <body>
+                <h1>아차사고 경험사례</h1>
+                <table>
+                    <tr>
+                        <th>작성일자</th><td>{data['작성일자']}</td>
+                        <th>소속</th><td>{data['department']}</td>
+                    </tr>
+                    <tr>
+                        <th>직책</th><td>{data['position']}</td>
+                        <th>성명</th><td>{data['name']}</td>
+                    </tr>
+                    <tr><th>사례명</th><td colspan="3">{data['사례명']}</td></tr>
+                    <tr><th>발생일시</th><td colspan="3">{data['발생일시']}</td></tr>
+                    <tr><th>발생개요</th><td colspan="3">{data['발생개요']}</td></tr>
+                    <tr><th>발생장소</th><td colspan="3">{data['발생장소']}</td></tr>
+                    <tr><th>설비</th><td colspan="3">{data['설비']}</td></tr>
+                    <tr><th>발생원인</th><td colspan="3">{data['발생원인']}</td></tr>
+                    <tr><th>예상피해</th><td colspan="3">{data['예상피해']}</td></tr>
+                    <tr><th>위험성추정및결정</th><td colspan="3">{data['위험성추정및결정']}</td></tr>
+                    <tr><th>재발방지대책</th><td colspan="3">{data['재발방지대책']}</td></tr>
+                </table>
+                <h2>관련 사진</h2>
+                <table>
+                    <tr>
+                        <th>개선 전 사진</th>
+                        <th>개선 후 사진</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            {'<img src="' + data["before_image_path"] + '">' if data["before_image_path"] else '(없음)'}
+                        </td>
+                        <td>
+                            {'<img src="' + data["after_image_path"] + '">' if data["after_image_path"] else '(없음)'}
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+            """
+            
+            # HTML 파일 임시 저장
+            temp_html = f"temp_{timestamp}.html"
+            with open(temp_html, "w", encoding="utf-8") as f:
+                f.write(html_content)
+            
+            # HTML 파일을 로드하고 스크린샷 캡처
+            driver.get(f"file:///{os.path.abspath(temp_html)}")
+            driver.save_screenshot(img_path)
+            
+            # 임시 HTML 파일 삭제
+            os.remove(temp_html)
+            
+            return f"/image_reports/{img_filename}"
+        finally:
+            driver.quit()
+            
+    except Exception as e:
+        print(f"🚨 이미지 생성 중 예외 발생: {str(e)}")
+        return None
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     error = request.query_params.get('error')
     error_message = None
-    if error == 'pdf_generation_failed':
-        error_message = "PDF 생성에 실패했습니다. OpenAI API Key가 올바르게 설정되어 있는지 확인해주세요."
+    if error == 'generation_failed':
+        error_message = "보고서 생성에 실패했습니다. 다시 시도해주세요."
     elif error == 'submission_failed':
         error_message = "제출 처리 중 오류가 발생했습니다. 다시 시도해주세요."
     
@@ -171,16 +267,14 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {
         "request": request,
         "error_message": error_message,
-        "api_key_status": "설정됨" if OPENAI_API_KEY else "설정되지 않음",
-        "api_key_valid": is_valid,
-        "api_key_message": message
+        "api_key_valid": is_valid
     })
 
 @app.get("/list", response_class=HTMLResponse)
 async def list_cases(request: Request):
     conn = sqlite3.connect("reports.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT id, description, image_path, timestamp, pdf_path FROM cases ORDER BY timestamp DESC")
+    cursor.execute("SELECT id, description, image_path, timestamp, pdf_path, report_image_path FROM cases ORDER BY timestamp DESC")
     cases = cursor.fetchall()
     conn.close()
     return templates.TemplateResponse("list.html", {"request": request, "cases": cases})
@@ -285,8 +379,7 @@ async def submit_case(
     재발방지대책: str = Form(...)):
     try:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        # PDF 생성
-        pdf_path = generate_pdf({
+        data = {
             "department": department,
             "position": position,
             "name": name,
@@ -303,15 +396,22 @@ async def submit_case(
             "예상피해": 예상피해,
             "위험성추정및결정": 위험성추정및결정,
             "재발방지대책": 재발방지대책
-        }, timestamp)
-        if pdf_path is None:
-            return RedirectResponse(url="/?error=pdf_generation_failed", status_code=303)
+        }
+        
+        # PDF 생성
+        pdf_path = generate_pdf(data, timestamp)
+        
+        # 이미지 생성
+        img_path = generate_image(data, timestamp)
+        
+        if pdf_path is None and img_path is None:
+            return RedirectResponse(url="/?error=generation_failed", status_code=303)
 
         # 데이터베이스 저장
         conn = sqlite3.connect("reports.db")
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path) VALUES (?, ?, ?, ?)", 
-                      (description, before_image_path, timestamp, pdf_path))
+        cursor.execute("INSERT INTO cases (description, image_path, timestamp, pdf_path, report_image_path) VALUES (?, ?, ?, ?, ?)", 
+                      (description, before_image_path, timestamp, pdf_path, img_path))
         conn.commit()
         conn.close()
 
