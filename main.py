@@ -58,6 +58,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.mount("/pdf_reports", StaticFiles(directory="pdf_reports"), name="pdf_reports")
+app.mount("/image_reports", StaticFiles(directory="image_reports"), name="image_reports")
 templates = Jinja2Templates(directory="templates")
 
 # Database initialization
