@@ -54,6 +54,12 @@ else:
 
 app = FastAPI()
 
+# Create necessary directories
+os.makedirs("static", exist_ok=True)
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("pdf_reports", exist_ok=True)
+os.makedirs("image_reports", exist_ok=True)
+
 # Static and template settings
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
